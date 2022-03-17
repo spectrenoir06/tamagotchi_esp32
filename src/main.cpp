@@ -46,15 +46,15 @@ extern "C" {
 		icone7_png_start
 	};
 
-	const uint32_t icone_size[8] = {
-		icone0_png_end - icone0_png_start,
-		icone1_png_end - icone1_png_start,
-		icone2_png_end - icone2_png_start,
-		icone3_png_end - icone3_png_start,
-		icone4_png_end - icone4_png_start,
-		icone5_png_end - icone5_png_start,
-		icone6_png_end - icone6_png_start,
-		icone7_png_end - icone7_png_start
+	const int icone_size[8] = {
+		icone0_png_end-icone0_png_start,
+		icone1_png_end-icone1_png_start,
+		icone2_png_end-icone2_png_start,
+		icone3_png_end-icone3_png_start,
+		icone4_png_end-icone4_png_start,
+		icone5_png_end-icone5_png_start,
+		icone6_png_end-icone6_png_start,
+		icone7_png_end-icone7_png_start
 	};
 #endif
 
@@ -118,7 +118,6 @@ static bool_t icone_buffer_old[8] = {0};
 static void hal_update_screen(void) {
 	for (int x=0; x<LCD_WIDTH; x++) {
 		for (int y=0; y<LCD_HEIGHT; y++) {
-			// Serial.printf("%d %d\n", x, y);
 			if (matrix_buffer_old[y][x] != matrix_buffer[y][x]) {
 				M5.Lcd.fillRect(
 					x + x * 8,
@@ -167,22 +166,30 @@ static void hal_set_lcd_icon(u8_t icon, bool_t val) {
 	icone_buffer[icon] = val;
 }
 
+u32_t g_freq = 0;
+
 static void hal_set_frequency(u32_t freq) {
 	// if (current_freq != freq) {
 	// 	current_freq = freq;
 	// 	sin_pos = 0;
 	// }
+	g_freq = freq;
 }
 
 static void hal_play_frequency(bool_t en) {
 	// if (is_audio_playing != en) {
 	// 	is_audio_playing = en;
 	// }
+	// if (en) {
+	// 	M5.Speaker.tone(g_freq);
+	// }
 }
 
 uint8_t a_is_press = 0;
 uint8_t b_is_press = 0;
 uint8_t c_is_press = 0;
+
+uint8_t speed_is_press = 0;
 
 static int hal_handler(void) {
 	if (a_is_press != M5.BtnA.isPressed()) {
@@ -207,6 +214,14 @@ static int hal_handler(void) {
 		else
 			tamalib_set_button(BTN_RIGHT, BTN_STATE_RELEASED);
 		c_is_press = M5.BtnStart.isPressed();
+	}
+
+	if (speed_is_press != M5.BtnVolume.isPressed()) {
+		if (M5.BtnVolume.isPressed())
+			tamalib_set_speed(0);
+		else
+			tamalib_set_speed(1);
+		speed_is_press = M5.BtnVolume.isPressed();
 	}
 
 	M5.update();
@@ -258,7 +273,7 @@ void tamagotchi_render_task(void* parameter) {
 	}
 	for (;;) {
 		hal_update_screen();
-		vTaskDelay(50 / portTICK_PERIOD_MS);
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
 }
 
