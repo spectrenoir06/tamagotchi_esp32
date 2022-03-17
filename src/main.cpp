@@ -50,7 +50,7 @@ static timestamp_t hal_get_timestamp(void) {
 	return (tv.tv_sec * 1000000 + tv.tv_usec);
 }
 
-#define NO_SLEEP 
+// #define NO_SLEEP 
 
 static void hal_sleep_until(timestamp_t ts) {
 	#ifndef NO_SLEEP
@@ -70,18 +70,18 @@ static void hal_sleep_until(timestamp_t ts) {
 static bool_t matrix_buffer[LCD_HEIGHT][LCD_WIDTH] = { {0} };
 
 static void hal_update_screen(void) {
-	for (int x=0; x<LCD_WIDTH; x++) {
-		for (int y=0; y<LCD_HEIGHT; y++) {
-			// Serial.printf("%d %d\n", x, y);
-			M5.Lcd.fillRect(
-				x + x * 9,
-				y + y * 9,
-				9,
-				9,
-				!matrix_buffer[y][x] ? 0x0 : 0xffffff
-			);
-		}
-	}
+	// for (int x=0; x<LCD_WIDTH; x++) {
+	// 	for (int y=0; y<LCD_HEIGHT; y++) {
+	// 		// Serial.printf("%d %d\n", x, y);
+	// 		M5.Lcd.fillRect(
+	// 			x + x * 1,
+	// 			y + y * 1,
+	// 			1,
+	// 			1,
+	// 			!matrix_buffer[y][x] ? 0x0 : 0xffffff
+	// 		);
+	// 	}
+	// }
 	
 
 }
@@ -89,6 +89,13 @@ static void hal_update_screen(void) {
 
 static void hal_set_lcd_matrix(u8_t x, u8_t y, bool_t val) {
 	matrix_buffer[y][x] = val;
+	M5.Lcd.fillRect(
+		x + x * 8,
+		y + y * 8,
+		8,
+		8,
+		!val ? 0x0 : 0xffffff
+	);
 }
 
 static void hal_set_lcd_icon(u8_t icon, bool_t val) {
@@ -182,5 +189,8 @@ void setup() {
 }
 
 void loop() {
-	vTaskDelay(1 / portTICK_PERIOD_MS);
+	// tamalib_step();
+	// hal_handler();
+	// hal_update_screen();
+	// vTaskDelay(1 / portTICK_PERIOD_MS);
 }	
