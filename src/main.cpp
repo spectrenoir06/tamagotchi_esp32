@@ -10,6 +10,52 @@ extern "C" {
 
 #ifdef USE_LCD
 	#include <ESP32-Chimera-Core.h>
+
+	extern const char icone0_png_start[] asm("_binary_res_icone0_png_start");
+	extern const char icone0_png_end[]   asm("_binary_res_icone0_png_end");
+
+	extern const char icone1_png_start[] asm("_binary_res_icone1_png_start");
+	extern const char icone1_png_end[]   asm("_binary_res_icone1_png_end");
+
+	extern const char icone2_png_start[] asm("_binary_res_icone2_png_start");
+	extern const char icone2_png_end[]   asm("_binary_res_icone2_png_end");
+
+	extern const char icone3_png_start[] asm("_binary_res_icone3_png_start");
+	extern const char icone3_png_end[]   asm("_binary_res_icone3_png_end");
+
+	extern const char icone4_png_start[] asm("_binary_res_icone4_png_start");
+	extern const char icone4_png_end[]   asm("_binary_res_icone4_png_end");
+
+	extern const char icone5_png_start[] asm("_binary_res_icone5_png_start");
+	extern const char icone5_png_end[]   asm("_binary_res_icone5_png_end");
+
+	extern const char icone6_png_start[] asm("_binary_res_icone6_png_start");
+	extern const char icone6_png_end[]   asm("_binary_res_icone6_png_end");
+
+	extern const char icone7_png_start[] asm("_binary_res_icone7_png_start");
+	extern const char icone7_png_end[]   asm("_binary_res_icone7_png_end");
+
+	const char* icone[8] = {
+		icone0_png_start,
+		icone1_png_start,
+		icone2_png_start,
+		icone3_png_start,
+		icone4_png_start,
+		icone5_png_start,
+		icone6_png_start,
+		icone7_png_start
+	};
+
+	const uint32_t icone_size[8] = {
+		icone0_png_end - icone0_png_start,
+		icone1_png_end - icone1_png_start,
+		icone2_png_end - icone2_png_start,
+		icone3_png_end - icone3_png_start,
+		icone4_png_end - icone4_png_start,
+		icone5_png_end - icone5_png_start,
+		icone6_png_end - icone6_png_start,
+		icone7_png_end - icone7_png_start
+	};
 #endif
 
 log_level_t log_levels = LOG_ERROR;
@@ -45,9 +91,7 @@ static void hal_log(log_level_t level, char* buff, ...) {
 }
 
 static timestamp_t hal_get_timestamp(void) {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec * 1000000 + tv.tv_usec);
+	return esp_timer_get_time();
 }
 
 // #define NO_SLEEP 
@@ -55,10 +99,8 @@ static timestamp_t hal_get_timestamp(void) {
 static void hal_sleep_until(timestamp_t ts) {
 	#ifndef NO_SLEEP
 		int32_t remaining = (int32_t)(ts - hal_get_timestamp());
-
-		/* Sleep for a bit more than what is needed */
 		if (remaining > 0) {
-			delayMicroseconds(remaining);
+			ets_delay_us(remaining);
 		}
 	#else
 		/* Wait instead of sleeping to get the highest possible accuracy
@@ -68,38 +110,61 @@ static void hal_sleep_until(timestamp_t ts) {
 	#endif
 }
 static bool_t matrix_buffer[LCD_HEIGHT][LCD_WIDTH] = { {0} };
+static bool_t matrix_buffer_old[LCD_HEIGHT][LCD_WIDTH] = { {0} };
+
+static bool_t icone_buffer[8] = {0};
+static bool_t icone_buffer_old[8] = {0};
 
 static void hal_update_screen(void) {
-	// for (int x=0; x<LCD_WIDTH; x++) {
-	// 	for (int y=0; y<LCD_HEIGHT; y++) {
-	// 		// Serial.printf("%d %d\n", x, y);
-	// 		M5.Lcd.fillRect(
-	// 			x + x * 1,
-	// 			y + y * 1,
-	// 			1,
-	// 			1,
-	// 			!matrix_buffer[y][x] ? 0x0 : 0xffffff
-	// 		);
-	// 	}
-	// }
-	
+	for (int x=0; x<LCD_WIDTH; x++) {
+		for (int y=0; y<LCD_HEIGHT; y++) {
+			// Serial.printf("%d %d\n", x, y);
+			if (matrix_buffer_old[y][x] != matrix_buffer[y][x]) {
+				M5.Lcd.fillRect(
+					x + x * 8,
+					48 + y + y * 8,
+					8,
+					8,
+					matrix_buffer[y][x] ? 0x0000000 : 0xffffff
+				);
+				matrix_buffer_old[y][x] = matrix_buffer[y][x];
+			}
+		}
+	}
+	for (int i=0; i < 8; i++) {
+		if (icone_buffer[i] != icone_buffer_old[i]) {
+			int y = 0;
+			if (i >= 4)
+				y = 192;
 
+			if (icone_buffer[i]) {
+				M5.Lcd.drawPng(
+					(uint8_t*)icone[i],
+					icone_size[i],
+					64+i%4*48,
+					y
+				);
+			} else {
+				M5.Lcd.fillRect(
+					64+i%4*48,
+					y,
+					48,
+					48,
+					0x000000
+				);
+			}
+			icone_buffer_old[i] = icone_buffer[i];
+		}
+	}
 }
 
 
 static void hal_set_lcd_matrix(u8_t x, u8_t y, bool_t val) {
 	matrix_buffer[y][x] = val;
-	M5.Lcd.fillRect(
-		x + x * 8,
-		y + y * 8,
-		8,
-		8,
-		!val ? 0x0 : 0xffffff
-	);
 }
 
 static void hal_set_lcd_icon(u8_t icon, bool_t val) {
-	// icon_buffer[icon] = val;
+	icone_buffer[icon] = val;
 }
 
 static void hal_set_frequency(u32_t freq) {
@@ -166,31 +231,79 @@ static hal_t hal = {
 
 static breakpoint_t* g_breakpoints = NULL;
 
-// static u12_t* g_program = NULL;		// The actual program that is executed
-// static uint32_t g_program_size = 0;
+void tamagotchi_cpu_task(void* parameter) {
+	for (;;) {
+		tamalib_step();
+	}
+}
+
+void tamagotchi_input_task(void* parameter) {
+	for (;;) {
+		hal_handler();
+		vTaskDelay(20 / portTICK_PERIOD_MS);
+	}
+}
+
+void tamagotchi_render_task(void* parameter) {
+	for (int x = 0; x < LCD_WIDTH; x++) {
+		for (int y = 0; y < LCD_HEIGHT; y++) {
+				M5.Lcd.fillRect(
+					x + x * 8,
+					48 + y + y * 8,
+					8,
+					8,
+					0xffffff
+				);
+			}
+	}
+	for (;;) {
+		hal_update_screen();
+		vTaskDelay(50 / portTICK_PERIOD_MS);
+	}
+}
 
 void setup() {
 	Serial.begin(115200);
 	Serial.printf("Start\n");
 
 	#ifdef USE_LCD
-		pinMode(TFT_BL, OUTPUT);
-		digitalWrite(TFT_BL, 1);
-	#endif
-	#ifdef USE_LCD
 		M5.begin();
 	#endif
 
-	
-
 	tamalib_register_hal(&hal);
 	tamalib_init(g_program, g_breakpoints, 1000000); // my_breakpoints can be NULL, 1000000 means that timestamps will be expressed in us
-	tamalib_mainloop();
+
+	xTaskCreatePinnedToCore(
+		tamagotchi_input_task,    // Function that should be called
+		"tamagotchi_input_task",   // Name of the task (for debugging)
+		10000,            // Stack size (bytes)
+		NULL,            // Parameter to pass
+		1,               // Task priority
+		NULL,             // Task handle
+		0          // Core you want to run the task on (0 or 1)
+	);
+
+	xTaskCreatePinnedToCore(
+		tamagotchi_cpu_task,    // Function that should be called
+		"tamagotchi_cpu_task",   // Name of the task (for debugging)
+		10000,            // Stack size (bytes)
+		NULL,            // Parameter to pass
+		1,               // Task priority
+		NULL,             // Task handle
+		1          // Core you want to run the task on (0 or 1)
+	);
+
+	xTaskCreatePinnedToCore(
+		tamagotchi_render_task,    // Function that should be called
+		"tamagotchi_render_task",   // Name of the task (for debugging)
+		10000,            // Stack size (bytes)
+		NULL,            // Parameter to pass
+		1,               // Task priority
+		NULL,             // Task handle
+		0          // Core you want to run the task on (0 or 1)
+	);
 }
 
 void loop() {
-	// tamalib_step();
-	// hal_handler();
-	// hal_update_screen();
-	// vTaskDelay(1 / portTICK_PERIOD_MS);
+	vTaskDelay(1 / portTICK_PERIOD_MS);
 }	
