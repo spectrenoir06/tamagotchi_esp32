@@ -242,12 +242,6 @@ static hal_t hal = {
 
 static breakpoint_t* g_breakpoints = NULL;
 
-void tamagotchi_cpu_task(void* parameter) {
-	for (;;) {
-		tamalib_step();
-	}
-}
-
 
 
 void lua_tamalib_state_save(uint8_t* buf) {
@@ -393,16 +387,18 @@ void lua_tamalib_state_load(uint8_t* buf) {
 }
 
 
-void tamagotchi_input_task(void* parameter) {
+void tamagotchi_cpu_task(void* parameter) {
 	uint32_t timer = millis() + 10000;
 	for (;;) {
-		hal_handler();
+		tamalib_step();
+
 		if (millis() > timer) {
 			File file = SPIFFS.open("/save.state", FILE_WRITE);
 			if (!file) {
 				Serial.println("Failed to open savestate");
 				// return;
-			} else {
+			}
+			else {
 				char* buf = (char*)malloc(1000);
 				lua_tamalib_state_save((uint8_t*)buf);
 				file.write((uint8_t*)buf, 816);
@@ -411,6 +407,13 @@ void tamagotchi_input_task(void* parameter) {
 			}
 			timer = millis() + 10000;
 		}
+	}
+}
+
+
+void tamagotchi_input_task(void* parameter) {
+	for (;;) {
+		hal_handler();
 		vTaskDelay(20 / portTICK_PERIOD_MS);
 	}
 }
@@ -446,9 +449,6 @@ void setup() {
 		return;
 	}
 
-
-
-
 	tamalib_register_hal(&hal);
 	tamalib_init(g_program, g_breakpoints, 1000000); // my_breakpoints can be NULL, 1000000 means that timestamps will be expressed in us
 
@@ -465,7 +465,7 @@ void setup() {
 		free(buf);
 	}
 
-	xTaskCreatePinnedToCore(
+		(
 		tamagotchi_input_task,    // Function that should be called
 		"tamagotchi_input_task",   // Name of the task (for debugging)
 		10000,            // Stack size (bytes)
